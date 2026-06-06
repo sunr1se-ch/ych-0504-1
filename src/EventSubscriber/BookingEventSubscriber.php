@@ -49,10 +49,10 @@ final class BookingEventSubscriber implements EventSubscriberInterface
             ->andWhere('b.startedAt IS NULL')
             ->andWhere('NOT EXISTS (
                 SELECT 1 FROM App\Entity\Booking prev
-                WHERE prev.slot = s AND prev.status = :failedStatus AND prev.id != b.id
+                WHERE prev.slot = s AND prev.status IN (:activeStatuses) AND prev.id != b.id
             )')
             ->setParameter('status', Booking::STATUS_PENDING)
-            ->setParameter('failedStatus', Booking::STATUS_FAILED)
+            ->setParameter('activeStatuses', [Booking::STATUS_ACTIVE, Booking::STATUS_PENDING])
             ->setParameter('now', $now)
             ->getQuery()
             ->getResult();

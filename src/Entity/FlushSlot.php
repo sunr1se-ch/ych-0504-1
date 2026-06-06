@@ -104,7 +104,7 @@ class FlushSlot
 
     public function setBooking(?Booking $booking): static
     {
-        if ($booking === null && $this->booking !== null) {
+        if ($this->booking !== null && $this->booking !== $booking) {
             $this->booking->setSlot(null);
         }
 

@@ -38,7 +38,7 @@ class SlotEventController extends AbstractController
             ]);
         }
 
-        $response = new StreamedResponse(function () use ($slot) {
+        $response = new StreamedResponse(function () use ($id) {
             $startTime = time();
             $maxExecutionTime = 300;
 
@@ -53,9 +53,14 @@ class SlotEventController extends AbstractController
                     break;
                 }
 
+                $this->flushSlotRepository->getEntityManager()->refresh(
+                    $slot = $this->flushSlotRepository->find($id)
+                );
+
                 $booking = $slot->getBooking();
                 $bookingData = null;
                 if ($booking !== null) {
+                    $this->flushSlotRepository->getEntityManager()->refresh($booking);
                     $bookingData = [
                         'id' => $booking->getId(),
                         'status' => $booking->getStatus(),

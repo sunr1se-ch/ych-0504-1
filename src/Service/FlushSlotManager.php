@@ -94,11 +94,13 @@ final readonly class FlushSlotManager
 
         $this->entityManager->persist($newBooking);
         $this->entityManager->remove($waitlist);
+
+        $slot->setBooking($newBooking);
         $slot->setIsOpen(false);
 
-        $newBooking->setSlot($slot);
+        $this->entityManager->flush();
 
-        $this->messageBus->dispatch(new EvaluateFlushMessage($newBooking->getId()));
+        $this->openValve($newBooking);
 
         $this->logger->info('New booking created from waitlist', [
             'slot_id' => $slot->getId(),

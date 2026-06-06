@@ -52,7 +52,7 @@ class WaitlistRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(
             ['slot' => $slotId],
-            ['priority' => 'ASC', 'createdAt' => 'DESC']
+            ['priority' => 'DESC', 'createdAt' => 'ASC']
         );
     }
 }
