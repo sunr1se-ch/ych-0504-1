@@ -1,0 +1,184 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Slot #{{ slot.id }} Details{% endblock %}
+
+{% block body %}
+    <turbo-frame id="slot-content" {{ stimulus_controller('slot-monitor', {
+        slotId: slot.id,
+        sseUrl: path('api_slot_events', {id: slot.id})
+    }) }}>
+        {% block slot_content %}
+            <div class="slot-detail-page">
+                <div class="page-header">
+                    <a href="{{ path('admin_slot_index', {
+                        startDate: slot.startTime.format('Y-m-d'),
+                        endDate: slot.startTime.modify('+6 days').format('Y-m-d')
+                    }) }}" class="btn btn-back">&larr; Back to Calendar</a>
+                    <h1 class="page-title">Slot #{{ slot.id }} Details</h1>
+                    <div class="live-indicator-wrapper">
+                        <span class="live-indicator" aria-hidden="true"></span>
+                        <span class="live-text">Live</span>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <h2 class="card-title">Slot Information</h2>
+                        <div class="info-list">
+                            <div class="info-item">
+                                <span class="info-label">Rack:</span>
+                                <span class="info-value">{{ slot.rack.name }} ({{ slot.rack.volumeM3 }} m&sup3;)</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Start Time:</span>
+                                <span class="info-value">{{ slot.startTime.format('Y-m-d H:i') }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Duration:</span>
+                                <span class="info-value">{{ slot.durationMinutes }} minutes</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value">
+                                    {% if slot.isOpen %}
+                                        <span class="status-badge status-available">Open</span>
+                                    {% else %}
+                                        <span class="status-badge status-done">Closed</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" data-action="slot-monitor#forceFlush">
+                                Force Flush
+                            </button>
+                            {% if booking is not null %}
+                                <button class="btn btn-danger" data-action="slot-monitor#cancelBooking">
+                                    Cancel Booking
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if booking is not null %}
+                        <div class="detail-card" data-slot-monitor-target="statusCard">
+                            <h2 class="card-title">Booking Status</h2>
+                            <div class="status-card-inner">
+                                <div class="status-header">
+                                    <span class="status-badge status-{{ booking.status }} booking-status">{{ booking.status|capitalize }}</span>
+                                    <span class="booking-id">Booking #{{ booking.id }}</span>
+                                </div>
+                                <div class="info-list">
+                                    <div class="info-item">
+                                        <span class="info-label">User:</span>
+                                        <span class="info-value">{{ booking.userName }}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Created:</span>
+                                        <span class="info-value">{{ booking.createdAt.format('Y-m-d H:i') }}</span>
+                                    </div>
+                                    {% if booking.startedAt %}
+                                        <div class="info-item">
+                                            <span class="info-label">Started:</span>
+                                            <span class="info-value">{{ booking.startedAt.format('Y-m-d H:i') }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if booking.completedAt %}
+                                        <div class="info-item">
+                                            <span class="info-label">Completed:</span>
+                                            <span class="info-value">{{ booking.completedAt.format('Y-m-d H:i') }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if booking.targetCo2Ppm %}
+                                        <div class="info-item">
+                                            <span class="info-label">Target CO2:</span>
+                                            <span class="info-value">{{ booking.targetCo2Ppm }} ppm</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if booking.valveOpenedAt %}
+                                        <div class="info-item">
+                                            <span class="info-label">Valve Opened:</span>
+                                            <span class="info-value">{{ booking.valveOpenedAt.format('Y-m-d H:i') }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if co2Data is not empty %}
+                    <div class="detail-card chart-card" data-slot-monitor-target="co2Chart">
+                        <h2 class="card-title">CO2 Readings</h2>
+                        <div class="chart-container">
+                            <div class="chart-y-axis">
+                                {% set yMax = (maxCo2 / 1000) * 1000 + 1000 %}
+                                {% set yStep = yMax / 4 %}
+                                {% for i in 4 downto 0 %}
+                                    <div class="y-tick">{{ (yStep * i)|round(0) }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="chart-bars">
+                                {% for data in co2Data %}
+                                    {% set height = (data.value / yMax) * 100 %}
+                                    <div class="bar-wrapper" title="{{ data.value }} ppm at {{ data.time }}">
+                                        <div class="bar" style="height: {{ height }}%"></div>
+                                        <div class="bar-label">{{ data.time }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="chart-legend">
+                            <span>Time</span>
+                            <span>CO2 (ppm)</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="detail-card">
+                        <h2 class="card-title">CO2 Readings</h2>
+                        <p class="no-data">No CO2 readings available yet.</p>
+                    </div>
+                {% endif %}
+
+                <div class="detail-card waitlist-card" data-slot-monitor-target="waitlistTable">
+                    <h2 class="card-title">Waitlist ({{ waitlist|length }})</h2>
+                    {% if waitlist is empty %}
+                        <p class="no-data">No one is on the waitlist.</p>
+                    {% else %}
+                        <table class="waitlist-table">
+                            <thead>
+                                <tr>
+                                    <th>Position</th>
+                                    <th>User</th>
+                                    <th>Priority</th>
+                                    <th>Added</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in waitlist %}
+                                    <tr class="waitlist-row">
+                                        <td class="position-cell">#{{ loop.index }}</td>
+                                        <td class="user-cell">{{ item.userName }}</td>
+                                        <td class="priority-cell">
+                                            <span class="priority-badge priority-{{ item.priority }}">
+                                                {% if item.priority >= 10 %}
+                                                    High
+                                                {% elseif item.priority >= 5 %}
+                                                    Medium
+                                                {% else %}
+                                                    Low
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="added-cell">{{ item.createdAt.format('Y-m-d H:i') }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+        {% endblock %}
+    </turbo-frame>
+{% endblock %}

@@ -1,0 +1,79 @@
+version: '3.8'
+
+networks:
+    symfony:
+        driver: bridge
+
+volumes:
+    db_data:
+        driver: local
+
+services:
+    php:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - ./:/var/www/html:rw,cached
+        networks:
+            - symfony
+        depends_on:
+            - db
+        environment:
+            - PHP_INI_DIR=/usr/local/etc/php
+
+    worker:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: php bin/console messenger:consume async -vv
+        volumes:
+            - ./:/var/www/html:rw,cached
+        networks:
+            - symfony
+        depends_on:
+            - db
+            - rabbitmq
+            - php
+        environment:
+            - PHP_INI_DIR=/usr/local/etc/php
+
+    messenger-consumer:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: php bin/console messenger:consume evaluate_flush --time-limit=3600 -vv
+        volumes:
+            - ./:/var/www/html:rw,cached
+        networks:
+            - symfony
+        depends_on:
+            - db
+            - php
+        environment:
+            - PHP_INI_DIR=/usr/local/etc/php
+
+    db:
+        image: postgres:15-alpine
+        environment:
+            POSTGRES_DB: symfony
+            POSTGRES_USER: symfony
+            POSTGRES_PASSWORD: symfony
+        volumes:
+            - db_data:/var/lib/postgresql/data:rw
+        networks:
+            - symfony
+        ports:
+            - "5432:5432"
+
+    nginx:
+        image: nginx:alpine
+        ports:
+            - "80:80"
+        volumes:
+            - ./:/var/www/html:ro,cached
+            - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+        networks:
+            - symfony
+        depends_on:
+            - php

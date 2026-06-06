@@ -1,0 +1,3 @@
+stimulus:
+    controllers_path: '%kernel.project_dir%/assets/controllers'
+    main_controller_path: '%kernel.project_dir%/assets/app.js'

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin Calendar{% endblock %}</title>
+    {% block stylesheets %}
+        {{ importmap('app') }}
+    {% endblock %}
+    {% block javascripts %}
+        {{ turbo_stream() }}
+    {% endblock %}
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="{{ path('admin_slot_index') }}" class="nav-link">Slot Calendar</a>
+        </nav>
+    </header>
+    <main class="main">
+        {% block body %}{% endblock %}
+    </main>
+</body>
+</html>

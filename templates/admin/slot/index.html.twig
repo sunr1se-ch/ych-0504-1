@@ -1,0 +1,152 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Slot Calendar{% endblock %}
+
+{% block body %}
+    <div {{ stimulus_controller('calendar', {
+        startDate: startDate.format('Y-m-d'),
+        endDate: endDate.format('Y-m-d')
+    }) }}>
+        <div class="calendar-header">
+            <h1 class="calendar-title">Slot Calendar</h1>
+            
+            <div class="calendar-controls">
+                <a href="{{ path('admin_slot_index', {
+                    startDate: prevWeekStart.format('Y-m-d'),
+                    endDate: prevWeekEnd.format('Y-m-d')
+                }) }}"
+                   class="btn btn-secondary"
+                   data-action="calendar#prevWeek"
+                   data-calendar-target="prevBtn">
+                    &larr; Previous Week
+                </a>
+                
+                <div class="date-picker-wrapper">
+                    <input type="date"
+                           class="date-picker"
+                           value="{{ startDate.format('Y-m-d') }}"
+                           data-action="calendar#goToDate"
+                           data-calendar-target="currentDate">
+                    <span class="date-range-label" data-calendar-target="currentDate">
+                        {{ startDate.format('M j, Y') }} - {{ endDate.format('M j, Y') }}
+                    </span>
+                </div>
+                
+                <a href="{{ path('admin_slot_index', {
+                    startDate: nextWeekStart.format('Y-m-d'),
+                    endDate: nextWeekEnd.format('Y-m-d')
+                }) }}"
+                   class="btn btn-secondary"
+                   data-action="calendar#nextWeek"
+                   data-calendar-target="nextBtn">
+                    Next Week &rarr;
+                </a>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="status-dot status-available"></span>
+                    <span>Available</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-dot status-pending"></span>
+                    <span>Pending/Active</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-dot status-failed"></span>
+                    <span>Failed</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-dot status-done"></span>
+                    <span>Done</span>
+                </div>
+                <div class="legend-item">
+                    <span class="live-indicator" aria-hidden="true"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+        </div>
+        
+        <turbo-frame id="calendar-frame" data-calendar-target="calendar">
+            <div class="calendar-container">
+                <table class="calendar-table">
+                    <thead>
+                        <tr>
+                            <th class="rack-header">Rack</th>
+                            {% for day in days %}
+                                <th class="day-header {% if day.format('Y-m-d') == 'now'|date('Y-m-d') %}today{% endif %}">
+                                    <div class="day-name">{{ day.format('D') }}</div>
+                                    <div class="day-number">{{ day.format('j') }}</div>
+                                    <div class="day-month">{{ day.format('M') }}</div>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rack in racks %}
+                            <tr class="rack-row">
+                                <td class="rack-cell">
+                                    <div class="rack-name">{{ rack.name }}</div>
+                                    <div class="rack-info">{{ rack.volumeM3 }} m&sup3;</div>
+                                </td>
+                                {% for day in days %}
+                                    {% set dateKey = day.format('Y-m-d') %}
+                                    {% set rackId = rack.id %}
+                                    {% set daySlots = groupedSlots[rackId][dateKey] ?? [] %}
+                                    <td class="day-cell {% if day.format('Y-m-d') == 'now'|date('Y-m-d') %}today{% endif %}">
+                                        {% if daySlots is empty %}
+                                            <div class="empty-cell">
+                                                <span class="empty-text">No slots</span>
+                                            </div>
+                                        {% else %}
+                                            {% for slot in daySlots %}
+                                                {% set booking = slot.booking %}
+                                                {% set status = 'available' %}
+                                                
+                                                {% if booking %}
+                                                    {% set status = booking.status %}
+                                                {% elseif not slot.isOpen %}
+                                                    {% set status = 'done' %}
+                                                {% endif %}
+                                                
+                                                {% set statusClass = 'status-' ~ status %}
+                                                
+                                                <a href="{{ path('admin_slot_show', {id: slot.id}) }}"
+                                                   class="slot-block {{ statusClass }}"
+                                                   data-turbo-frame="_top"
+                                                   data-slot-id="{{ slot.id }}">
+                                                    <div class="slot-time">
+                                                        {{ slot.startTime.format('H:i') }}
+                                                        {% if slot.durationMinutes %}
+                                                            <span class="slot-duration">({{ slot.durationMinutes }}m)</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if booking %}
+                                                        <div class="slot-user">{{ booking.userName }}</div>
+                                                    {% endif %}
+                                                    <div class="slot-status">
+                                                        <span class="status-badge {{ statusClass }}">{{ status|capitalize }}</span>
+                                                    </div>
+                                                    {% if slot.waitlist is not empty %}
+                                                        <div class="waitlist-badge">
+                                                            <span class="waitlist-count">{{ slot.waitlist|length }}</span>
+                                                            <span class="waitlist-icon">⏳</span>
+                                                        </div>
+                                                    {% endif %}
+                                                </a>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </turbo-frame>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+{% endblock %}

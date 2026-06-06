@@ -1,0 +1,7 @@
+turbo:
+    default_action: navigate
+    sse:
+        enabled: true
+    mercure:
+        enabled: true
+        hub: default
